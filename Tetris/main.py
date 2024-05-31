@@ -3,8 +3,19 @@ import gym_simpletetris
 import pygame
 
 # Initialize the environments
-env_agent = gym.make('SimpleTetris-v0')
-env_adversary = gym.make('SimpleTetris-v0')
+env_agent = gym.make('SimpleTetris-v0',
+                     obs_type='grayscale',              # ram | grayscale | rgb
+                     reward_step=True,                  # See reward table
+                     penalise_height_increase=True,     # See reward table
+                     advanced_clears=True,              # See reward table
+                     penalise_holes_increase=True)      # See reward table
+
+env_adversary = gym.make('SimpleTetris-v0',
+                     obs_type='grayscale',              # ram | grayscale | rgb
+                     reward_step=True,                  # See reward table
+                     penalise_height_increase=True,     # See reward table
+                     advanced_clears=True,              # See reward table
+                     penalise_holes_increase=True)      # See reward table
 
 # Window setup, adjust for two environments side by side
 pygame.init()
@@ -17,32 +28,35 @@ clock = pygame.time.Clock()
 state_agent = env_agent.reset()
 state_adversary = env_adversary.reset()
 
-episode = 0
-while episode < 10:
-    # Agent environment step
-    action_agent = env_agent.action_space.sample()
-    state_agent, reward_agent, done_agent, info_agent = env_agent.step(action_agent)
+num_episodes = 10
 
-    # Adversary environment step
-    action_adversary = env_adversary.action_space.sample()
-    state_adversary, reward_adversary, done_adversary, info_adversary = env_adversary.step(action_adversary)
-    
-    if done_agent or done_adversary:
-        print(f"Episode {episode + 1} has finished.")
-        episode += 1
+if __name__ == "__main__":
+    curr_episode = 0
+    while curr_episode < num_episodes:
+        # Agent environment step
+        action_agent = env_agent.action_space.sample()
+        state_agent, reward_agent, done_agent, info_agent = env_agent.step(action_agent)
 
-        state_agent = env_agent.reset()
-        state_adversary = env_adversary.reset()
+        # Adversary environment step
+        action_adversary = env_adversary.action_space.sample()
+        state_adversary, reward_adversary, done_adversary, info_adversary = env_adversary.step(action_adversary)
+        
+        if done_agent or done_adversary:
+            print(f"Episode {curr_episode + 1} has finished.")
+            curr_episode += 1
 
-    # Rendering
-    window.fill((0, 0, 0))
-    env_agent.render(surface=window, offset=(0, 0))
-    env_adversary.render(surface=window, offset=(window_size, 0))
+            state_agent = env_agent.reset()
+            state_adversary = env_adversary.reset()
 
-    # Update the display
-    pygame.display.update()
-    clock.tick(30)
+        # Rendering
+        window.fill((0, 0, 0))
+        env_agent.render(surface=window, offset=(0, 0))
+        env_adversary.render(surface=window, offset=(window_size, 0))
 
-env_agent.close()
-env_adversary.close()
-pygame.quit()
+        # Update the display
+        pygame.display.update()
+        clock.tick(30)
+
+    env_agent.close()
+    env_adversary.close()
+    pygame.quit()
