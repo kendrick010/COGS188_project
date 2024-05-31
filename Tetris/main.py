@@ -28,7 +28,26 @@ clock = pygame.time.Clock()
 state_agent = env_agent.reset()
 state_adversary = env_adversary.reset()
 
+state_cache = {
+    "agent": {},
+    "adversary": {}
+}
+
 num_episodes = 10
+
+def penalize(info, sending_agent="agent"):
+    # Initialize state_cache if empty
+    if not state_cache[sending_agent]: 
+        state_cache[sending_agent] = info
+        return
+
+    delta = info["lines_cleared"] - state_cache[sending_agent]["lines_cleared"]
+    if sending_agent == "agent":
+        env_adversary.add_lines(delta)
+    else:
+        env_agent.add_lines(delta)
+
+    state_cache[sending_agent] = info
 
 if __name__ == "__main__":
     curr_episode = 0
@@ -37,9 +56,15 @@ if __name__ == "__main__":
         action_agent = env_agent.action_space.sample()
         state_agent, reward_agent, done_agent, info_agent = env_agent.step(action_agent)
 
+        # Penalize adversary if cleared lines
+        penalize(info_agent, "agent")
+
         # Adversary environment step
         action_adversary = env_adversary.action_space.sample()
         state_adversary, reward_adversary, done_adversary, info_adversary = env_adversary.step(action_adversary)
+
+        # Penalize agent if cleared lines
+        penalize(info_adversary, "adversary")
         
         if done_agent or done_adversary:
             print(f"Episode {curr_episode + 1} has finished.")

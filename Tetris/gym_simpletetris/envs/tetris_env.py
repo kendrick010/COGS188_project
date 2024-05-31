@@ -409,6 +409,12 @@ class TetrisEnv(gym.Env):
                 return np.reshape(obs, newshape=(84, 84, 1)) if extend else obs
             else:
                 return convert_grayscale_rgb(obs)
+            
+    def add_lines(self, num_lines):
+        for _ in range(num_lines):
+            # Shift everything up and add a random line at the bottom without any holes
+            self.engine.board = np.roll(self.engine.board, -1, axis=1)
+            self.engine.board[:, -1] = np.random.randint(2, size=self.engine.board.shape[0])
 
     def render(self, mode='human', surface=None, offset=(0, 0)):
         if self.window is None and surface is None:
