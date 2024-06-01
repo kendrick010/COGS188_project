@@ -180,6 +180,8 @@ class TetrisEngine:
         # self.shape_counts = [0] * len(shapes)
         self.shape_counts = dict(zip(shape_names, [0] * len(shapes)))
 
+        self.incoming_shape = self._choose_shape()
+
     def _choose_shape(self):
         values = list(self.shape_counts.values())
         maxm = max(values)
@@ -195,7 +197,11 @@ class TetrisEngine:
         # x = int((self.width/2+1) * np.random.rand(1,1)[0,0]) + 2
         self.anchor = (self.width / 2, 0)
         # self.anchor = (x, 0)
-        self.shape_name = self._choose_shape()
+
+        # Read from incoming shapes queue and choose next
+        self.shape_name = self.incoming_shape
+        self.incoming_shape = self._choose_shape()
+
         self.shape_counts[self.shape_name] += 1
         self.shape = shapes[self.shape_name]
 
@@ -231,13 +237,11 @@ class TetrisEngine:
 
     def get_info(self):
         return {
-            'time': self.time,
+            'current_board': self.board,
             'current_piece': self.shape_name,
-            'score': self.score,
+            'next_piece': self.incoming_shape,
             'lines_cleared': self.lines_cleared,
-            'holes': self.holes,
-            'deaths': self.n_deaths,
-            'statistics': self.shape_counts
+            'holes': self.holes
         }
 
     def step(self, action):
