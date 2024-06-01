@@ -19,6 +19,7 @@ window_size = 512
 combined_window_size = (2 * window_size, window_size)
 window = pygame.display.set_mode(combined_window_size)
 clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 24)
 
 enumerated_shapes = {'T': [1, 0, 0, 0, 0, 0, 0], 'J': [0, 1, 0, 0, 0, 0, 0], 
                      'L': [0, 0, 1, 0, 0, 0, 0], 'Z': [0, 0, 0, 1, 0, 0, 0], 
@@ -55,7 +56,11 @@ def input_package(info):
     # Convert back to a numpy array
     return np.array(package)
 
-def simulate_tetris_game(genome1, genome2, config):
+def render_text(window, text, position):
+    text_surface = font.render(text, True, (255, 255, 255))
+    window.blit(text_surface, position)
+
+def simulate_tetris_game(genome1, genome2, config, generation, population_pair):
     # Initialize the environments
     env_agent = gym.make('SimpleTetris-v0',
                         obs_type='grayscale',              # ram | grayscale | rgb
@@ -75,7 +80,7 @@ def simulate_tetris_game(genome1, genome2, config):
     net_agent = neat.nn.FeedForwardNetwork.create(genome1, config)
     net_adversary = neat.nn.FeedForwardNetwork.create(genome2, config)
 
-    for _ in range(num_episodes):
+    for ep in range(num_episodes):
         # Reset environments
         state_agent = env_agent.reset()
         state_adversary = env_adversary.reset()
@@ -111,6 +116,9 @@ def simulate_tetris_game(genome1, genome2, config):
                 window.fill((0, 0, 0))
                 env_agent.render(surface=window, offset=(0, 0))
                 env_adversary.render(surface=window, offset=(window_size, 0))
+                render_text(window, f"Generation: {generation}", (10, 10))
+                render_text(window, f"Population Pair: {population_pair}", (10, 30))
+                render_text(window, f"Episode: {ep}/{num_episodes}", (10, 50))
                 pygame.display.flip()  # Update the full display Surface to the screen
                 clock.tick(30)  # Control the game's frame rate
 
@@ -120,7 +128,7 @@ def simulate_tetris_game(genome1, genome2, config):
     env_agent.close()
     env_adversary.close()
 
-def eval_genomes(genomes, config):
+def eval_genomes(genomes, config, generation):
     # Ensure population size is even
     for idx in range(0, len(genomes), 2):
         _, genome1 = genomes[idx]
@@ -129,7 +137,7 @@ def eval_genomes(genomes, config):
         genome1.fitness = 0
         genome2.fitness = 0
         
-        simulate_tetris_game(genome1, genome2, config)
+        simulate_tetris_game(genome1, genome2, config, generation, idx // 2 + 1)
 
 def run_neat(config, generations=50, run_last_checkpoint=False):
     # Create a NEAT population
@@ -149,7 +157,10 @@ def run_neat(config, generations=50, run_last_checkpoint=False):
     p.add_reporter(neat.StdOutReporter(True))  # Output statistics to console
     p.add_reporter(neat.Checkpointer(1, filename_prefix=os.path.join(checkpoints_dir, "neat-checkpoint-")))
 
-    winner = p.run(eval_genomes, generations)
+    for generation in range(generations):
+        p.run(lambda genomes, config: eval_genomes(genomes, config, generation), 1)
+
+    winner = p.best_genome
     with open("best_model.pickle", "wb") as f:
         pickle.dump(winner, f)
 
