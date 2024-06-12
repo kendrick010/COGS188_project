@@ -84,16 +84,11 @@ def simulate_tetris_game(genome1, genome2, config, generation, population_pair):
         }
 
         while not done_agent or not done_adversary:
-            # First move random
-            if not info_cache["agent"]:
-                action_agent = env_agent.action_space.sample()
-                action_adversary = env_adversary.action_space.sample()
-            else:
-                action_agent = np.argmax(net_agent.activate(input_package(info_agent)))
-                action_adversary = np.argmax(net_adversary.activate(input_package(info_adversary)))
+            input_package_agent = np.argmax(net_agent.activate(state_agent.flatten()))
+            input_package_adversary = np.argmax(net_adversary.activate(state_adversary.flatten()))
 
-            _, reward_agent, done_agent, info_agent = env_agent.step(action_agent)
-            _, reward_adversary, done_adversary, info_adversary = env_adversary.step(action_adversary)
+            state_agent, reward_agent, done_agent, info_agent = env_agent.step(input_package_agent)
+            state_adversary, reward_adversary, done_adversary, info_adversary = env_adversary.step(input_package_adversary)
 
             # Penalize opposings for line clears
             penalize(info_agent, info_cache, env_agent, env_adversary, "agent")

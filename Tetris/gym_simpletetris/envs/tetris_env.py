@@ -259,6 +259,7 @@ class TetrisEngine:
 
     def get_info(self):
         return {
+            'board': self.board,
             'bumpiness': self.get_bumpiness(),
             'total_height': np.sum(self.get_heights()),
             'lines_cleared': self.lines_cleared,
