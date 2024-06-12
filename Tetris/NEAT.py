@@ -10,6 +10,8 @@ import numpy as np
 relative_path = os.path.dirname(__file__)
 config_path = os.path.join(relative_path, "assets/config.txt")
 checkpoints_dir = os.path.join(relative_path, "models")
+best_model_path = os.path.join(relative_path, "models/best_model.pickle")
+latest_checkpoint_file = 0
 
 # Window setup, adjust for two environments side by side
 rendering = True
@@ -20,11 +22,6 @@ combined_window_size = (2 * window_size, window_size)
 window = pygame.display.set_mode(combined_window_size)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 24)
-
-enumerated_shapes = {'T': [1, 0, 0, 0, 0, 0, 0], 'J': [0, 1, 0, 0, 0, 0, 0], 
-                     'L': [0, 0, 1, 0, 0, 0, 0], 'Z': [0, 0, 0, 1, 0, 0, 0], 
-                     'S': [0, 0, 0, 0, 1, 0, 0], 'I': [0, 0, 0, 0, 0, 1, 0], 
-                     'O': [0, 0, 0, 0, 0, 0, 1]}
 
 # Out of how many games per versus
 num_episodes = 3
@@ -43,18 +40,9 @@ def penalize(info, info_cache, env_agent, env_adversary, sending_agent="agent"):
 
     info_cache[sending_agent] = info
 
-def input_package(info):
-    # Default game board 10x20
-    package = info["current_board"].flatten().tolist()
-    
-    # Append the current piece, next piece, lines cleared, and holes
-    package.extend(enumerated_shapes[info["current_piece"]])
-    package.extend(enumerated_shapes[info["next_piece"]])
-    package.append(info["lines_cleared"])
-    package.append(info["holes"])
-    
+def input_package(info):    
     # Convert back to a numpy array
-    return np.array(package)
+    return np.array([info[key] for key in info])
 
 def render_text(window, text, position):
     text_surface = font.render(text, True, (255, 255, 255))
@@ -65,22 +53,22 @@ def simulate_tetris_game(genome1, genome2, config, generation, population_pair):
     env_agent = gym.make('SimpleTetris-v0',
                         obs_type='grayscale',              # ram | grayscale | rgb
                         reward_step=True,                  # See reward table
-                        penalise_height_increase=True,     # See reward table
+                        penalise_height=True,              # See reward table
                         advanced_clears=True,              # See reward table
-                        penalise_holes_increase=True)      # See reward table
+                        penalise_holes=True)               # See reward table
 
     env_adversary = gym.make('SimpleTetris-v0',
                         obs_type='grayscale',              # ram | grayscale | rgb
                         reward_step=True,                  # See reward table
-                        penalise_height_increase=True,     # See reward table
+                        penalise_height=True,              # See reward table
                         advanced_clears=True,              # See reward table
-                        penalise_holes_increase=True)      # See reward table
+                        penalise_holes=True)               # See reward table
     
     # Initialize network
     net_agent = neat.nn.FeedForwardNetwork.create(genome1, config)
     net_adversary = neat.nn.FeedForwardNetwork.create(genome2, config)
 
-    for ep in range(num_episodes):
+    for episode in range(num_episodes):
         # Reset environments
         state_agent = env_agent.reset()
         state_adversary = env_adversary.reset()
@@ -116,9 +104,9 @@ def simulate_tetris_game(genome1, genome2, config, generation, population_pair):
                 window.fill((0, 0, 0))
                 env_agent.render(surface=window, offset=(0, 0))
                 env_adversary.render(surface=window, offset=(window_size, 0))
-                render_text(window, f"Generation: {generation}", (10, 10))
+                render_text(window, f"Generation: {generation + latest_checkpoint_file}", (10, 10))
                 render_text(window, f"Population Pair: {population_pair}", (10, 30))
-                render_text(window, f"Episode: {ep}/{num_episodes}", (10, 50))
+                render_text(window, f"Episode: {episode}/{num_episodes}", (10, 50))
                 pygame.display.flip()  # Update the full display Surface to the screen
                 clock.tick(30)  # Control the game's frame rate
 
@@ -140,15 +128,17 @@ def eval_genomes(genomes, config, generation):
         simulate_tetris_game(genome1, genome2, config, generation, idx // 2 + 1)
 
 def run_neat(config, generations=50, run_last_checkpoint=False):
+    global latest_checkpoint_file
+
     # Create a NEAT population
     p = neat.Population(config)
     
     # If requested, restore from the last checkpoint
     if run_last_checkpoint:
-        checkpoint_files = [f for f in os.listdir(checkpoints_dir) if f.startswith("neat-checkpoint-")]
+        checkpoint_files = [int(f.replace('neat-checkpoint-', '')) for f in os.listdir(checkpoints_dir) if f.startswith("neat-checkpoint-")]
         if checkpoint_files:
             latest_checkpoint_file = max(checkpoint_files)
-            p = neat.Checkpointer.restore_checkpoint(os.path.join(checkpoints_dir, latest_checkpoint_file))
+            p = neat.Checkpointer.restore_checkpoint(os.path.join(checkpoints_dir, f"neat-checkpoint-{latest_checkpoint_file}"))
         # else: start from scratch
     
     # Add reporters to the population
@@ -161,7 +151,7 @@ def run_neat(config, generations=50, run_last_checkpoint=False):
         p.run(lambda genomes, config: eval_genomes(genomes, config, generation), 1)
 
     winner = p.best_genome
-    with open("best_model.pickle", "wb") as f:
+    with open(best_model_path, "wb") as f:
         pickle.dump(winner, f)
 
 if __name__ == "__main__":
@@ -169,6 +159,6 @@ if __name__ == "__main__":
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_path)
     
-    run_neat(config, generations=50, run_last_checkpoint=False)
+    run_neat(config, generations=5000, run_last_checkpoint=True)
 
     pygame.quit()

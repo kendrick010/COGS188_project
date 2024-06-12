@@ -137,7 +137,7 @@ class TetrisEngine:
                  penalise_holes_increase=False):
         self.width = width
         self.height = height
-        self.board = np.zeros(shape=(width, height), dtype=np.float)
+        self.board = np.zeros(shape=(width, height), dtype=np.float64)
         self._scoring = {
             'reward_step': reward_step,
             'penalise_height': penalise_height,
@@ -234,12 +234,33 @@ class TetrisEngine:
                 valid_action_sum += 1
 
         return valid_action_sum
+    
+    def get_heights(self):
+        """
+        Calculate the heights of each column in the Tetris board.
+        """
+        heights = np.zeros(self.board.shape[1], dtype=int)
+        for col in range(self.board.shape[1]):
+            for row in range(self.board.shape[0]):
+                if self.board[row, col] != 0:
+                    heights[col] = self.board.shape[0] - row
+                    break
+
+        return heights
+    
+    def get_bumpiness(self):
+        """
+        Calculate the bumpiness of the Tetris board.
+        """
+        heights = self.get_heights()
+        bumpiness = np.sum(np.abs(np.diff(heights)))
+
+        return bumpiness
 
     def get_info(self):
         return {
-            'current_board': self.board,
-            'current_piece': self.shape_name,
-            'next_piece': self.incoming_shape,
+            'bumpiness': self.get_bumpiness(),
+            'total_height': np.sum(self.get_heights()),
             'lines_cleared': self.lines_cleared,
             'holes': self.holes
         }
@@ -258,6 +279,8 @@ class TetrisEngine:
         # reward = self.valid_action_count()
         # reward = random.randint(0, 0)
         reward = 1 if self._scoring.get('advanced_clears') else 0
+
+        reward -= 10 * self.get_bumpiness()
 
         done = False
         if self._has_dropped():
