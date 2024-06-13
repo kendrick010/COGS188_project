@@ -15,7 +15,7 @@ check_point = False
 relative_path = os.path.dirname(__file__)
 config_path = os.path.join(relative_path, "assets/config.txt")
 checkpoints_dir = os.path.join(relative_path, "models")
-best_model_path = os.path.join(relative_path, "models/best_model.pickle")
+best_model_path = os.path.join(relative_path, "models/best_neat_model.pickle")
 csv_log_path = os.path.join(relative_path, "models/training_log.csv")
 latest_checkpoint_file = 0
 

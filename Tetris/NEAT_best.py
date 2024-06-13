@@ -9,7 +9,7 @@ import numpy as np
 # Config and checkpoint paths
 relative_path = os.path.dirname(__file__)
 config_path = os.path.join(relative_path, "assets/config.txt")
-best_model_path = os.path.join(relative_path, "models/best_model.pickle")
+best_model_path = os.path.join(relative_path, "models/best_neat_model.pickle")
 
 # Window setup, adjust for two environments side by side
 rendering = True
