@@ -5,16 +5,19 @@ import neat
 import pickle
 import os
 import numpy as np
+from CsvReporter import CsvReporter
+
+# Window setup, adjust for two environments side by side
+rendering = True
+check_point = False
 
 # Config and checkpoint paths
 relative_path = os.path.dirname(__file__)
 config_path = os.path.join(relative_path, "assets/config.txt")
 checkpoints_dir = os.path.join(relative_path, "models")
 best_model_path = os.path.join(relative_path, "models/best_model.pickle")
+csv_log_path = os.path.join(relative_path, "models/training_log.csv")
 latest_checkpoint_file = 0
-
-# Window setup, adjust for two environments side by side
-rendering = True
 
 pygame.init()
 window_size = 512
@@ -40,10 +43,6 @@ def penalize(info, info_cache, env_agent, env_adversary, sending_agent="agent"):
 
     info_cache[sending_agent] = info
 
-def input_package(info):    
-    # Convert back to a numpy array
-    return np.array([info[key] for key in info])
-
 def render_text(window, text, position):
     text_surface = font.render(text, True, (255, 255, 255))
     window.blit(text_surface, position)
@@ -51,14 +50,14 @@ def render_text(window, text, position):
 def simulate_tetris_game(genome1, genome2, config, generation, population_pair):
     # Initialize the environments
     env_agent = gym.make('SimpleTetris-v0',
-                        obs_type='grayscale',              # ram | grayscale | rgb
+                        obs_type='ram',                     # ram | grayscale | rgb
                         reward_step=True,                  # See reward table
                         penalise_height=True,              # See reward table
                         advanced_clears=True,              # See reward table
                         penalise_holes=True)               # See reward table
 
     env_adversary = gym.make('SimpleTetris-v0',
-                        obs_type='grayscale',              # ram | grayscale | rgb
+                        obs_type='ram',                     # ram | grayscale | rgb
                         reward_step=True,                  # See reward table
                         penalise_height=True,              # See reward table
                         advanced_clears=True,              # See reward table
@@ -142,6 +141,9 @@ def run_neat(config, generations=50, run_last_checkpoint=False):
     p.add_reporter(neat.StdOutReporter(True))  # Output statistics to console
     p.add_reporter(neat.Checkpointer(1, filename_prefix=os.path.join(checkpoints_dir, "neat-checkpoint-")))
 
+    csv_reporter = CsvReporter(csv_log_path)
+    p.add_reporter(csv_reporter)
+
     for generation in range(generations):
         p.run(lambda genomes, config: eval_genomes(genomes, config, generation), 1)
 
@@ -154,6 +156,6 @@ if __name__ == "__main__":
                          neat.DefaultSpeciesSet, neat.DefaultStagnation,
                          config_path)
     
-    run_neat(config, generations=5000, run_last_checkpoint=True)
+    run_neat(config, generations=50, run_last_checkpoint=check_point)
 
     pygame.quit()

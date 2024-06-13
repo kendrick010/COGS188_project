@@ -281,7 +281,7 @@ class TetrisEngine:
         # reward = random.randint(0, 0)
         reward = 1 if self._scoring.get('advanced_clears') else 0
 
-        reward -= 10 * self.get_bumpiness()
+        reward -= 100 * self.get_bumpiness()
 
         done = False
         if self._has_dropped():
@@ -312,7 +312,7 @@ class TetrisEngine:
                     self._count_holes()
 
                     if self._scoring.get('penalise_height'):
-                        reward -= sum(np.any(self.board, axis=0))
+                        reward -= sum(np.any(self.board, axis=0)) * 100
                     elif self._scoring.get('penalise_height_increase'):
                         new_height = sum(np.any(self.board, axis=0))
                         if new_height > self.piece_height:
@@ -320,7 +320,7 @@ class TetrisEngine:
                         self.piece_height = new_height
 
                     if self._scoring.get('penalise_holes'):
-                        reward -= 5 * self.holes
+                        reward -= 100 * self.holes
                     elif self._scoring.get('penalise_holes_increase'):
                         reward -= 5 * (self.holes - old_holes)
 
